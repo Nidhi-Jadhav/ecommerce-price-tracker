@@ -1,4 +1,5 @@
 from contextlib import asynccontextmanager
+from urllib.parse import urlencode
 from fastapi import Depends, FastAPI, Form, HTTPException, Request
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
@@ -18,17 +19,19 @@ templates = Jinja2Templates(directory="app/templates")
 def health(): return {"status": "ok"}
 @app.get("/", response_class=HTMLResponse)
 def dashboard(request: Request, db: Session = Depends(get_db)):
-    return templates.TemplateResponse(request, "index.html", {"products": db.query(Product).order_by(Product.created_at.desc()).all()})
+    return templates.TemplateResponse(request, "index.html", {"products": db.query(Product).order_by(Product.created_at.desc()).all(), "notice": request.query_params.get("notice"), "error": request.query_params.get("error")})
 @app.post("/products")
 def add_product(url: str = Form(...), target_price: float = Form(...), db: Session = Depends(get_db)):
     try: retailer = retailer_for(url)
-    except ValueError as error: raise HTTPException(400, str(error))
-    if db.query(Product).filter(Product.url == url).first(): raise HTTPException(409, "This URL is already tracked.")
+    except ValueError as error:
+        return RedirectResponse("/?" + urlencode({"error": str(error)}), status_code=303)
+    if db.query(Product).filter(Product.url == url).first():
+        return RedirectResponse("/?" + urlencode({"error": "This product is already in your watchlist."}), status_code=303)
     product = Product(name="Fetching product details…", url=url, retailer=retailer, target_price=target_price)
     db.add(product); db.commit(); db.refresh(product)
     try: check_product(db, product)
     except Exception: pass
-    return RedirectResponse("/", status_code=303)
+    return RedirectResponse("/?" + urlencode({"notice": "Product added to your watchlist."}), status_code=303)
 @app.post("/products/{product_id}/check")
 def check(product_id: int, db: Session = Depends(get_db)):
     product = db.get(Product, product_id)
