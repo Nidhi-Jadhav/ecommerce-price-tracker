@@ -9,7 +9,6 @@ from .database import ensure_schema, get_db
 from .models import Product
 from .scraper import retailer_for
 from .services import check_product
-from .notifications import send_test_alert
 import logging
 
 logger = logging.getLogger(__name__)
@@ -40,27 +39,8 @@ def add_product(url: str = Form(...), target_price: float = Form(...), alert_ema
         check_product(db, product)
     except Exception:
         logger.exception("Initial price check or alert failed for product %s", product.id)
-        return RedirectResponse("/?" + urlencode({"notice": "Product added to your watchlist.", "error": "The first price check or email alert failed. Use Check now to retry."}), status_code=303)
+        return RedirectResponse("/?" + urlencode({"notice": "Product added to your watchlist."}), status_code=303)
     return RedirectResponse("/?" + urlencode({"notice": "Product added to your watchlist."}), status_code=303)
-@app.post("/products/{product_id}/check")
-def check(product_id: int, db: Session = Depends(get_db)):
-    product = db.get(Product, product_id)
-    if not product: raise HTTPException(404, "Product not found")
-    try: check_product(db, product)
-    except Exception:
-        logger.exception("Price check or alert failed for product %s", product.id)
-        return RedirectResponse("/?" + urlencode({"error": "The price check or email alert failed. Check the Render logs, then try again."}), status_code=303)
-    return RedirectResponse("/", status_code=303)
-@app.post("/products/{product_id}/test-alert")
-def test_alert(product_id: int, db: Session = Depends(get_db)):
-    product = db.get(Product, product_id)
-    if not product: raise HTTPException(404, "Product not found")
-    try:
-        if not send_test_alert(product):
-            return RedirectResponse("/?" + urlencode({"error": "Email is not configured for this product."}), status_code=303)
-    except Exception:
-        return RedirectResponse("/?" + urlencode({"error": "The test email could not be sent. Check your SendGrid sender and API key."}), status_code=303)
-    return RedirectResponse("/?" + urlencode({"notice": f"Test email sent to {product.alert_email or 'the configured recipient'}."}), status_code=303)
 @app.post("/products/{product_id}/delete")
 def delete(product_id: int, db: Session = Depends(get_db)):
     product = db.get(Product, product_id)

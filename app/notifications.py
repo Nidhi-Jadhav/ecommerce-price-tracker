@@ -12,6 +12,3 @@ def _send(product, subject, heading, description):
 
 def send_alert(product):
     return _send(product, f"Price drop: {product.name}", "Target reached", f"This product is now ₹{product.current_price:,.2f}, below your target of ₹{product.target_price:,.2f}.")
-
-def send_test_alert(product):
-    return _send(product, f"Test alert: {product.name}", "Email alerts are working", f"This is a test notification for your target price of ₹{product.target_price:,.2f}. You will receive a price-drop alert here when the target is reached.")
