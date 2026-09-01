@@ -9,6 +9,7 @@ from .database import ensure_schema, get_db
 from .models import Product
 from .scraper import retailer_for
 from .services import check_product
+from .notifications import send_test_alert
 @asynccontextmanager
 async def lifespan(app):
     ensure_schema(); yield
@@ -42,6 +43,16 @@ def check(product_id: int, db: Session = Depends(get_db)):
     try: check_product(db, product)
     except Exception as error: raise HTTPException(502, str(error))
     return RedirectResponse("/", status_code=303)
+@app.post("/products/{product_id}/test-alert")
+def test_alert(product_id: int, db: Session = Depends(get_db)):
+    product = db.get(Product, product_id)
+    if not product: raise HTTPException(404, "Product not found")
+    try:
+        if not send_test_alert(product):
+            return RedirectResponse("/?" + urlencode({"error": "Email is not configured for this product."}), status_code=303)
+    except Exception:
+        return RedirectResponse("/?" + urlencode({"error": "The test email could not be sent. Check your SendGrid sender and API key."}), status_code=303)
+    return RedirectResponse("/?" + urlencode({"notice": f"Test email sent to {product.alert_email or 'the configured recipient'}."}), status_code=303)
 @app.post("/products/{product_id}/delete")
 def delete(product_id: int, db: Session = Depends(get_db)):
     product = db.get(Product, product_id)
