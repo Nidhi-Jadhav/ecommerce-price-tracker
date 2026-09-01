@@ -5,9 +5,3 @@ services:
     buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /health
-  - type: cron
-    name: ecommerce-price-tracker-daily-check
-    runtime: python
-    schedule: "0 9 * * *"
-    buildCommand: pip install -r requirements.txt
-    startCommand: python -m app.jobs

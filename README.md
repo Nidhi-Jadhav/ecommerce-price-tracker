@@ -36,7 +36,7 @@ For an always-on process, run `python -m app.scheduler`. For Windows Task Schedu
 
 ## Deploy
 
-The included [`render.yaml`](render.yaml) creates a web service and an independent daily cron job. Add `SENDGRID_API_KEY`, `ALERT_FROM_EMAIL`, and `ALERT_TO_EMAIL` as environment variables in your deployment dashboard. For a durable production database, set `DATABASE_URL` to a managed Postgres URL.
+The included [`render.yaml`](render.yaml) creates a web service for the dashboard. Add `SENDGRID_API_KEY` and `ALERT_FROM_EMAIL` as environment variables in your deployment dashboard. The no-cost deployment supports the **Check now** button; automated daily checks require running `python -m app.scheduler` on a machine you control or using a paid scheduler. For a durable production database, set `DATABASE_URL` to a managed Postgres URL.
 
 GitHub Actions runs the test suite on pushes and pull requests. The daily workflow is an optional alternative scheduler, but needs the same environment secrets and a publicly reachable deployed API; the Render cron is simpler for this project.
 
