@@ -12,6 +12,9 @@ def ensure_schema():
     if "alert_email" not in columns:
         with engine.begin() as connection:
             connection.execute(text("ALTER TABLE products ADD COLUMN alert_email VARCHAR(320)"))
+    if "alert_sent_at" not in columns:
+        with engine.begin() as connection:
+            connection.execute(text("ALTER TABLE products ADD COLUMN alert_sent_at DATETIME"))
 def get_db():
     db = SessionLocal()
     try: yield db
