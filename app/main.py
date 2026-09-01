@@ -5,13 +5,13 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
-from .database import Base, engine, get_db
+from .database import ensure_schema, get_db
 from .models import Product
 from .scraper import retailer_for
 from .services import check_product
 @asynccontextmanager
 async def lifespan(app):
-    Base.metadata.create_all(bind=engine); yield
+    ensure_schema(); yield
 app = FastAPI(title="E-commerce Price Tracker", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory="app/static"), name="static")
 templates = Jinja2Templates(directory="app/templates")
@@ -21,13 +21,16 @@ def health(): return {"status": "ok"}
 def dashboard(request: Request, db: Session = Depends(get_db)):
     return templates.TemplateResponse(request, "index.html", {"products": db.query(Product).order_by(Product.created_at.desc()).all(), "notice": request.query_params.get("notice"), "error": request.query_params.get("error")})
 @app.post("/products")
-def add_product(url: str = Form(...), target_price: float = Form(...), db: Session = Depends(get_db)):
+def add_product(url: str = Form(...), target_price: float = Form(...), alert_email: str = Form(...), db: Session = Depends(get_db)):
+    alert_email = alert_email.strip().lower()
+    if "@" not in alert_email or alert_email.startswith("@") or alert_email.endswith("@"):
+        return RedirectResponse("/?" + urlencode({"error": "Enter a valid email address for price alerts."}), status_code=303)
     try: retailer = retailer_for(url)
     except ValueError as error:
         return RedirectResponse("/?" + urlencode({"error": str(error)}), status_code=303)
     if db.query(Product).filter(Product.url == url).first():
         return RedirectResponse("/?" + urlencode({"error": "This product is already in your watchlist."}), status_code=303)
-    product = Product(name="Fetching product details…", url=url, retailer=retailer, target_price=target_price)
+    product = Product(name="Fetching product details…", url=url, retailer=retailer, target_price=target_price, alert_email=alert_email)
     db.add(product); db.commit(); db.refresh(product)
     try: check_product(db, product)
     except Exception: pass

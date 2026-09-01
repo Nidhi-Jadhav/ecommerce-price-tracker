@@ -9,6 +9,7 @@ class Product(Base):
     url: Mapped[str] = mapped_column(String(2048), unique=True)
     retailer: Mapped[str] = mapped_column(String(30))
     target_price: Mapped[float] = mapped_column(Float)
+    alert_email: Mapped[str | None] = mapped_column(String(320), nullable=True)
     current_price: Mapped[float | None] = mapped_column(Float, nullable=True)
     image_url: Mapped[str | None] = mapped_column(String(2048), nullable=True)
     last_checked_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
